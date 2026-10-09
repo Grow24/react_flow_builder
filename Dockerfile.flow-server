@@ -8,6 +8,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY flow-builder/package.json flow-builder/package-lock.json ./
+COPY flow-builder/tsconfig.base.json ./tsconfig.base.json
 COPY flow-builder/apps ./apps
 COPY flow-builder/packages ./packages
 

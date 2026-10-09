@@ -1,10 +1,11 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "allowJs": true,
     "skipLibCheck": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
@@ -12,10 +13,16 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
+    "incremental": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@hbmp/types": ["../../packages/types/src"],
+      "@hbmp/types/*": ["../../packages/types/src/*"]
+    }
   },
-  "include": ["src", "vite.config.ts"],
-  "references": [{ "path": "../../packages/types" }]
+  "include": ["src", "vite.config.ts"]
 }
