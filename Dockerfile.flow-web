@@ -1,0 +1,22 @@
+# Flow Builder website. Zeabur service: set Dockerfile path to Dockerfile.flow-web.
+# Pass VITE_API_ORIGIN as the public Flow Builder API URL when building.
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+COPY flow-builder/package.json flow-builder/package-lock.json ./
+COPY flow-builder/apps ./apps
+COPY flow-builder/packages ./packages
+
+ARG VITE_API_ORIGIN=http://localhost:3001
+ENV VITE_API_ORIGIN=$VITE_API_ORIGIN
+
+RUN npm install
+RUN npx --workspace @hbmp/frontend vite build
+
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+
+WORKDIR /app/apps/frontend
+CMD ["sh", "-c", "npx vite preview --host 0.0.0.0 --port ${PORT:-8080}"]

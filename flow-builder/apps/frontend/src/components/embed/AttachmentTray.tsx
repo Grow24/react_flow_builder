@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { API_BASE } from '../../api/origin';
 import { Upload, Link, Type, Plus } from 'lucide-react';
 import { EmbedCard } from './EmbedCard';
 import { LinkUnfurlInput } from './LinkUnfurlInput';
@@ -47,13 +48,13 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = ({
       formData.append('file', file);
       
       try {
-        const response = await fetch('http://localhost:3001/api/media/upload', {
+        const response = await fetch(`${API_BASE}/media/upload`, {
           method: 'POST',
           body: formData
         });
         const media = await response.json();
         
-        await fetch('http://localhost:3001/api/attachments', {
+        await fetch(`${API_BASE}/attachments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scope, scopeId, mediaId: media.id })
@@ -68,14 +69,14 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = ({
 
   const handleLinkAdd = async (url: string) => {
     try {
-      const response = await fetch('http://localhost:3001/api/media/link', {
+      const response = await fetch(`${API_BASE}/media/link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
       const media = await response.json();
       
-      await fetch('http://localhost:3001/api/attachments', {
+      await fetch(`${API_BASE}/attachments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scope, scopeId, mediaId: media.id })
@@ -92,14 +93,14 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = ({
     if (!textContent.trim()) return;
     
     try {
-      const response = await fetch('http://localhost:3001/api/media/text', {
+      const response = await fetch(`${API_BASE}/media/text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: textContent, title: 'Rich Text Note' })
       });
       const media = await response.json();
       
-      await fetch('http://localhost:3001/api/attachments', {
+      await fetch(`${API_BASE}/attachments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scope, scopeId, mediaId: media.id })
@@ -115,7 +116,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = ({
 
   const handleRemove = async (attachmentId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/attachments/${attachmentId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/attachments/${attachmentId}`, { method: 'DELETE' });
       refreshAttachments();
     } catch (error) {
       console.error('Remove failed:', error);
@@ -124,7 +125,7 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = ({
 
   const refreshAttachments = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/attachments?scope=${scope}&scopeId=${scopeId}`);
+      const response = await fetch(`${API_BASE}/attachments?scope=${scope}&scopeId=${scopeId}`);
       const newAttachments = await response.json();
       onAttachmentsChange?.(newAttachments);
     } catch (error) {

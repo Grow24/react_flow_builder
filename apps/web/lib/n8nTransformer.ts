@@ -46,20 +46,52 @@ const NODE_TYPE_MAP: Record<string, string> = {
   service: 'n8n-nodes-base.httpRequest',
 };
 
+/** n8n If node: output 0 is true, output 1 is false. */
+const IF_NODE_TYPES = new Set(['flowDecision', 'gateway']);
+
+function exportableNodes(nodes: Node[]): Node[] {
+  return nodes.filter(node => node.type !== 'lane');
+}
+
+/**
+ * n8n connections refer to node names, and names must be unique.
+ */
+function buildNodeNames(nodes: Node[]): Map<string, string> {
+  const names = new Map<string, string>();
+  const used = new Map<string, number>();
+
+  exportableNodes(nodes).forEach((node, index) => {
+    const base = String(node.data?.label || `Node ${index + 1}`).trim() || `Node ${index + 1}`;
+    const seen = used.get(base) ?? 0;
+    used.set(base, seen + 1);
+    names.set(node.id, seen === 0 ? base : `${base} (${seen + 1})`);
+  });
+
+  return names;
+}
+
+/**
+ * Yes handle → true output (0). No handle → false output (1).
+ */
+function branchOutputIndex(source: Node | undefined, edge: Edge): number {
+  if (!source || !IF_NODE_TYPES.has(source.type || '')) return 0;
+  const handle = (edge.sourceHandle || '').toLowerCase();
+  if (handle === 'no' || handle === 'false') return 1;
+  return 0;
+}
+
 /**
  * Transform HBMP nodes to n8n nodes
  */
-function transformNodes(nodes: Node[]): N8nNode[] {
-  return nodes
-    .filter(node => node.type !== 'lane') // Skip swimlanes
-    .map((node, index) => ({
-      id: node.id,
-      name: node.data?.label || `Node ${index + 1}`,
-      type: NODE_TYPE_MAP[node.type || 'flowAction'] || 'n8n-nodes-base.noOp',
-      position: [node.position.x, node.position.y],
-      typeVersion: 1,
-      parameters: transformNodeParameters(node),
-    }));
+function transformNodes(nodes: Node[], nodeNames: Map<string, string>): N8nNode[] {
+  return exportableNodes(nodes).map(node => ({
+    id: node.id,
+    name: nodeNames.get(node.id) || node.id,
+    type: NODE_TYPE_MAP[node.type || 'flowAction'] || 'n8n-nodes-base.noOp',
+    position: [node.position.x, node.position.y],
+    typeVersion: 1,
+    parameters: transformNodeParameters(node),
+  }));
 }
 
 /**
@@ -117,24 +149,41 @@ function transformNodeParameters(node: Node): Record<string, any> {
  */
 function transformConnections(
   edges: Edge[],
-  nodes: Node[]
+  nodes: Node[],
+  nodeNames: Map<string, string>
 ): Record<string, { main: N8nConnection[][] }> {
   const connections: Record<string, { main: N8nConnection[][] }> = {};
+  const nodeById = new Map(nodes.map(node => [node.id, node]));
 
-  // Filter out edges connected to swimlanes
   const validEdges = edges.filter(edge => {
-    const sourceNode = nodes.find(n => n.id === edge.source);
-    const targetNode = nodes.find(n => n.id === edge.target);
-    return sourceNode?.type !== 'lane' && targetNode?.type !== 'lane';
+    const sourceNode = nodeById.get(edge.source);
+    const targetNode = nodeById.get(edge.target);
+    return (
+      sourceNode?.type !== 'lane' &&
+      targetNode?.type !== 'lane' &&
+      nodeNames.has(edge.source) &&
+      nodeNames.has(edge.target)
+    );
   });
 
   validEdges.forEach(edge => {
-    if (!connections[edge.source]) {
-      connections[edge.source] = { main: [[]] };
+    const sourceName = nodeNames.get(edge.source)!;
+    const targetName = nodeNames.get(edge.target)!;
+    const sourceNode = nodeById.get(edge.source);
+    const outputIndex = branchOutputIndex(sourceNode, edge);
+    const isIf = !!sourceNode && IF_NODE_TYPES.has(sourceNode.type || '');
+
+    if (!connections[sourceName]) {
+      connections[sourceName] = { main: isIf ? [[], []] : [[]] };
     }
 
-    connections[edge.source].main[0].push({
-      node: edge.target,
+    const outputs = connections[sourceName].main;
+    while (outputs.length <= outputIndex) {
+      outputs.push([]);
+    }
+
+    outputs[outputIndex].push({
+      node: targetName,
       type: 'main',
       index: 0,
     });
@@ -151,8 +200,9 @@ export function transformToN8n(
   edges: Edge[],
   workflowName: string = 'HBMP Workflow'
 ): N8nWorkflow {
-  const n8nNodes = transformNodes(nodes);
-  const n8nConnections = transformConnections(edges, nodes);
+  const nodeNames = buildNodeNames(nodes);
+  const n8nNodes = transformNodes(nodes, nodeNames);
+  const n8nConnections = transformConnections(edges, nodes, nodeNames);
 
   return {
     name: workflowName,

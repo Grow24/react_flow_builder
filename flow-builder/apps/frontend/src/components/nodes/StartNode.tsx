@@ -1,5 +1,4 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { StyledNodeWrapper } from './StyledNodeWrapper';
 import { drawioNodeStyles } from '../../config/nodeStyles';
 import { Play } from 'lucide-react';
@@ -37,28 +36,7 @@ export function StartNode({ data, selected }: StartNodeProps) {
         label={data.label || 'Start'}
         shape={nodeStyle.shape}
         selected={selected}
-      />
-      
-      {/* Output handles in all four directions */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 border-2 border-green-600 bg-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 border-2 border-green-600 bg-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        className="w-3 h-3 border-2 border-green-600 bg-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Top}
-        className="w-3 h-3 border-2 border-green-600 bg-white"
+        ports="out"
       />
     </div>
   );

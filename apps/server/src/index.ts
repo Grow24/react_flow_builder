@@ -9,6 +9,7 @@ import { diagramRoutes } from './routes/diagrams';
 import { projectRoutes } from './routes/projects';
 import { exportRoutes } from './routes/exports';
 import flowRoutes from './routes/flows';
+import networkRoutes from './routes/network';
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,7 @@ app.get('/health', (req, res) => {
 app.use('/api/projects', projectRoutes);
 app.use('/api/diagrams', diagramRoutes);
 app.use('/api/exports', exportRoutes);
+app.use('/api/network', networkRoutes);
 app.use(flowRoutes);
 
 // 404 handler

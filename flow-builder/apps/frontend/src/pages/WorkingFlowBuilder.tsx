@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { API_ORIGIN } from '../api/origin';
 import {
   ReactFlow,
   Controls,
@@ -138,7 +139,7 @@ export default function WorkingFlowBuilder() {
     });
 
     // Socket.io presence minimal join
-    const socket = io('http://localhost:3001/flow');
+    const socket = io(`${API_ORIGIN}/flow`);
     socket.emit('user_join', { roomId, user: currentUser });
 
     return () => {

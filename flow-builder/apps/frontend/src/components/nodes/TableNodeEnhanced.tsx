@@ -318,8 +318,9 @@ export function TableNode({ id, data, selected }: TableNodeProps) {
           textColor={style.textColor || '#1e293b'}
           icon={<Table className="w-4 h-4" />}
           label={data.label || 'Table'}
-          shape="rectangle"
-          selected={selected}
+        shape="rectangle"
+        selected={selected}
+        ports="none"
         >
         <div 
           className="table-header" 

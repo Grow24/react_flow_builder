@@ -1,0 +1,24 @@
+# Flow Builder API. Zeabur service: set Dockerfile path to Dockerfile.flow-server.
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY flow-builder/package.json flow-builder/package-lock.json ./
+COPY flow-builder/apps ./apps
+COPY flow-builder/packages ./packages
+
+RUN npm install
+RUN npx prisma generate --schema apps/backend/prisma/schema.prisma
+
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV DATABASE_URL=file:/data/dev.db
+RUN mkdir -p /data
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "npx prisma db push --schema apps/backend/prisma/schema.prisma --skip-generate && npx tsx apps/backend/src/server.ts"]

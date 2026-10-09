@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Square, Zap, Circle, Diamond, Layout, Maximize, FileText, Database, ArrowRightLeft, StickyNote, Type, MessageSquare, Image, Menu, Table } from 'lucide-react';
+import { Play, Square, Zap, Circle, Diamond, Layout, Maximize, FileText, Database, ArrowRightLeft, StickyNote, Type, MessageSquare, Image, Menu, Table, Filter, GitMerge, Monitor } from 'lucide-react';
 
 interface SidebarPaletteProps {
   onAddNode: (type: string) => void;
@@ -12,6 +12,10 @@ interface SidebarPaletteProps {
 export function SidebarPalette({ onAddNode, onAutoLayout, onFitView, onNodeDragStart, onNodeDragEnd }: SidebarPaletteProps) {
   const nodeTypes = [
     { type: 'start', label: 'Start', icon: <Play className="w-4 h-4 text-green-600" />, bgColor: 'bg-green-100' },
+    { type: 'importtable', label: 'Import table', icon: <Table className="w-4 h-4 text-blue-600" />, bgColor: 'bg-blue-100' },
+    { type: 'filter', label: 'Filter', icon: <Filter className="w-4 h-4 text-amber-600" />, bgColor: 'bg-amber-100' },
+    { type: 'join', label: 'Join', icon: <GitMerge className="w-4 h-4 text-violet-600" />, bgColor: 'bg-violet-100' },
+    { type: 'display', label: 'Display', icon: <Monitor className="w-4 h-4 text-teal-600" />, bgColor: 'bg-teal-100' },
     { type: 'decision', label: 'Decision', icon: <Diamond className="w-4 h-4 text-amber-600" />, bgColor: 'bg-amber-100' },
     { type: 'action', label: 'Action', icon: <Zap className="w-4 h-4 text-blue-600" />, bgColor: 'bg-blue-100' },
     { type: 'activity', label: 'Activity', icon: <Menu className="w-4 h-4 text-purple-600" />, bgColor: 'bg-purple-100' },
@@ -46,6 +50,8 @@ export function SidebarPalette({ onAddNode, onAutoLayout, onFitView, onNodeDragS
               <div
                 key={nodeType.type}
                 draggable
+                role="button"
+                aria-label={nodeType.label}
                 onClick={() => onAddNode(nodeType.type)}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('application/reactflow', nodeType.type);

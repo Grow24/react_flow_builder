@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -8,7 +8,9 @@ import {
   useEdgesState,
   addEdge,
   Connection,
+  ConnectionLineType,
   Edge,
+  MarkerType,
   Node,
   ReactFlowProvider,
   useReactFlow,
@@ -32,8 +34,9 @@ import { DiagramStats } from '../components/DiagramStats';
 import { AccessibilityProvider } from '../components/AccessibilityProvider';
 import { nodeTypes } from '../config/nodeTypes';
 import { flowsAPI } from '../api/flows';
+import { API_BASE } from '../api/origin';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Zap, Plus, Settings, FileText, Palette, AlignLeft, AlignRight, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Grid3X3, ArrowLeftRight, ArrowUpDown, PenTool } from 'lucide-react';
+import { Save, CheckCircle, Zap, Plus, Settings, FileText, Palette, AlignLeft, AlignRight, AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter, Grid3X3, ArrowLeftRight, ArrowUpDown, PenTool, Play } from 'lucide-react';
 import { ContextMenu } from '../components/ContextMenu';
 import { ExecutionResultsModal } from '../components/ExecutionResultsModal';
 import { FlowExecutionAnimator } from '../components/FlowExecutionAnimator';
@@ -83,6 +86,7 @@ function FlowBuilderContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentFlowId, setCurrentFlowId] = useState<number | null>(null);
   const [flowName, setFlowName] = useState('Untitled Flow');
+  const [savedFlows, setSavedFlows] = useState<Array<{ id: number; name: string }>>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [executionResult, setExecutionResult] = useState<any>(null);
@@ -114,17 +118,17 @@ function FlowBuilderContent() {
   const [cinematicMode, setCinematicMode] = useState(false);
   const [activeRequests, setActiveRequests] = useState(0);
   const [currentInputData, setCurrentInputData] = useState<any>(null);
-  const [connectorStyle, setConnectorStyle] = useState<'straight' | 'elbow' | 'rounded' | 'smooth'>('straight');
+  const [connectorStyle, setConnectorStyle] = useState<'straight' | 'elbow' | 'rounded' | 'smooth'>('smooth');
   const [showScienceTemplates, setShowScienceTemplates] = useState(false);
 
   const [executionSpeed, setExecutionSpeed] = useState(1);
 
   // Collaboration state
-  const currentUser: CollabUser = {
-    id: 'user-' + Math.random().toString(36).substr(2, 9),
+  const [currentUser] = useState<CollabUser>(() => ({
+    id: 'user-' + Math.random().toString(36).slice(2, 11),
     name: 'Demo User',
     color: '#3b82f6',
-  };
+  }));
   
   const [cursors, setCursors] = useState<any[]>([]);
   
@@ -163,12 +167,15 @@ function FlowBuilderContent() {
   
 
   
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+
   const handleEdgeLabelEdit = useCallback((edgeId: string, position: { x: number; y: number }) => {
-    const edge = edges.find(e => e.id === edgeId);
+    const edge = edgesRef.current.find(e => e.id === edgeId);
     if (edge) {
       setEdgeLabelEditor({ edge, position });
     }
-  }, [edges]);
+  }, []);
   
   const handleEdgeLabelChange = useCallback((edgeId: string, label: string) => {
     setEdges((eds) => eds.map(edge => 
@@ -203,25 +210,29 @@ function FlowBuilderContent() {
     [setEdges, handleEdgeLabelEdit, connectorStyle]
   );
 
-  // Update existing edges with the callback when it changes
+  // Stamp label callbacks onto existing edges. Skip when nothing changed so this
+  // does not schedule another render and freeze the page.
   useEffect(() => {
-    setEdges((eds) => eds.map(edge => ({
-      ...edge,
-      data: {
-        ...edge.data,
-        onLabelEdit: handleEdgeLabelEdit,
-        onLabelChange: handleEdgeLabelChange,
-        isDropTarget: dropTargetEdge === edge.id,
-      },
-      style: edge.style || {
-        strokeColor: '#64748b',
-        strokeWidth: 2,
-        style: 'bezier',
-        arrowHead: 'triangle',
-        dashed: false,
-        labelBgColor: '#ffffff'
-      }
-    })));
+    setEdges((eds) => {
+      if (eds.length === 0) return eds;
+      return eds.map(edge => ({
+        ...edge,
+        data: {
+          ...edge.data,
+          onLabelEdit: handleEdgeLabelEdit,
+          onLabelChange: handleEdgeLabelChange,
+          isDropTarget: dropTargetEdge === edge.id,
+        },
+        style: edge.style || {
+          strokeColor: '#64748b',
+          strokeWidth: 2,
+          style: 'bezier',
+          arrowHead: 'triangle',
+          dashed: false,
+          labelBgColor: '#ffffff'
+        }
+      }));
+    });
   }, [handleEdgeLabelEdit, handleEdgeLabelChange, dropTargetEdge, setEdges]);
 
   const handleSaveEdgeLabel = useCallback((edgeId: string, label: string) => {
@@ -449,6 +460,35 @@ function FlowBuilderContent() {
     let nodeData: any = baseData;
     if (type === 'action') {
       nodeData = { ...baseData, actionType: 'email' };
+    } else if (type === 'importtable') {
+      const alreadyImported = nodes.filter((node) => node.type === 'importtable').length;
+      nodeData = alreadyImported === 0
+        ? {
+            label: 'Customers',
+            tableName: 'Customers',
+            columns: ['id', 'name', 'city'],
+            rows: [
+              { id: 1, name: 'Anita', city: 'Pune' },
+              { id: 2, name: 'Ravi', city: 'Mumbai' },
+              { id: 3, name: 'Meera', city: 'Pune' },
+            ],
+          }
+        : {
+            label: 'Orders',
+            tableName: 'Orders',
+            columns: ['orderId', 'customerId', 'item'],
+            rows: [
+              { orderId: 101, customerId: 1, item: 'Notebook' },
+              { orderId: 102, customerId: 2, item: 'Pen' },
+              { orderId: 103, customerId: 1, item: 'Bag' },
+            ],
+          };
+    } else if (type === 'filter') {
+      nodeData = { label: 'Pick Anita', column: 'name', value: 'Anita' };
+    } else if (type === 'join') {
+      nodeData = { label: 'Join on customer', leftKey: 'id', rightKey: 'customerId' };
+    } else if (type === 'display') {
+      nodeData = { label: nodes.some((node) => node.type === 'display') ? 'Joined table' : 'Selected row' };
     } else if (type === 'decision') {
       nodeData = { ...baseData, conditions: [], defaultPath: 'default' };
     } else if (type === 'process') {
@@ -686,7 +726,7 @@ function FlowBuilderContent() {
 
   const handleSelectTemplate = useCallback(async (templateId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/templates/${templateId}`);
+      const response = await fetch(`${API_BASE}/templates/${templateId}`);
       const template = await response.json();
       
       // Handle both database templates (template.json) and static templates (template.data)
@@ -782,7 +822,7 @@ function FlowBuilderContent() {
   
   const handleSaveAsTemplate = useCallback(async (templateData: any) => {
     try {
-      const response = await fetch('http://localhost:3001/api/templates', {
+      const response = await fetch(`${API_BASE}/templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -847,7 +887,7 @@ function FlowBuilderContent() {
     setEdges(versionData.edges || []);
     // request restore for collab snapshots if flowId present
     if (currentFlowId) {
-      fetch(`http://localhost:3001/api/collab/flow/${currentFlowId}/restore/${versionData.id}`, { method: 'POST' });
+      fetch(`${API_BASE}/collab/flow/${currentFlowId}/restore/${versionData.id}`, { method: 'POST' });
     }
   }, [setNodes, setEdges]);
   
@@ -887,7 +927,7 @@ function FlowBuilderContent() {
   const handleNewFlow = async (preserveCanvas = false) => {
     try {
       const flowData = {
-        name: 'Untitled Flow',
+        name: preserveCanvas ? (flowName.trim() || 'Untitled Flow') : 'Untitled Flow',
         nodes: preserveCanvas ? nodes : [],
         edges: preserveCanvas ? edges : []
       };
@@ -902,6 +942,7 @@ function FlowBuilderContent() {
       }
       
       toast.success('New flow created');
+      refreshSavedFlows();
     } catch (error) {
       console.error('Failed to create flow:', error);
       toast.error('Failed to create flow');
@@ -916,12 +957,15 @@ function FlowBuilderContent() {
     
     try {
       setIsSaving(true);
+      const savedName = flowName.trim() || 'Untitled Flow';
+      if (savedName !== flowName) setFlowName(savedName);
       await flowsAPI.updateFlow(currentFlowId, {
-        name: flowName,
+        name: savedName,
         nodes,
         edges
       });
       toast.success('Flow saved');
+      refreshSavedFlows();
     } catch (error) {
       console.error('Failed to save flow:', error);
       toast.error('Failed to save flow');
@@ -929,6 +973,37 @@ function FlowBuilderContent() {
       setIsSaving(false);
     }
   };
+
+  const refreshSavedFlows = () => {
+    flowsAPI.getFlows()
+      .then((flows) => {
+        const list = flows
+          .map((flow) => ({ id: Number(flow.id), name: flow.name || 'Untitled Flow' }))
+          .filter((flow) => Number.isFinite(flow.id))
+          .sort((a, b) => b.id - a.id)
+          .slice(0, 12);
+        setSavedFlows(list);
+      })
+      .catch((error) => console.error('Failed to load saved flows', error));
+  };
+
+  const handleOpenSavedFlow = async (id: number) => {
+    try {
+      const flow = await flowsAPI.getFlow(id);
+      setNodes(flow.nodes || []);
+      setEdges((flow.edges || []).map((edge) => ({ ...edge, type: 'smooth' })));
+      setCurrentFlowId(flow.id);
+      setFlowName(flow.name || 'Untitled Flow');
+      toast.success('Saved flow opened');
+    } catch (error) {
+      console.error('Failed to open flow', error);
+      toast.error('Could not open that flow');
+    }
+  };
+
+  useEffect(() => {
+    refreshSavedFlows();
+  }, []);
 
   const handleValidateFlow = async () => {
     if (!currentFlowId) {
@@ -960,17 +1035,53 @@ function FlowBuilderContent() {
   };
 
   const handleRunWithInput = async (inputData: any) => {
+    if (!currentFlowId) {
+      toast.error('Please save the flow first');
+      return;
+    }
+
+    const started = Date.now();
     try {
       setCurrentInputData(inputData);
       setIsExecuting(true);
       setActiveRequests(1);
-      
-      // Start animation immediately
-      toast.success('Flow execution started - watch the animation!');
-      
+      const executionResult: any = await flowsAPI.runFlow(currentFlowId, inputData);
+      setExecutionResult({
+        status: executionResult.status || (executionResult.success ? 'completed' : 'failed'),
+        logs: executionResult.logs || [],
+        outputContext: executionResult.outputContext || executionResult.context || {},
+        executionId: executionResult.runId || `exec_${Date.now()}`,
+        startTime: new Date(started).toISOString(),
+        endTime: new Date().toISOString(),
+        duration: Date.now() - started,
+        prismaRunId: executionResult.prismaRunId,
+      });
+      if (Array.isArray(executionResult.nodeResults)) {
+        setNodes((current) => current.map((node) => {
+          const hit = executionResult.nodeResults.find((item: any) => item.id === node.id);
+          if (!hit) return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              runColor: '#86efac',
+              previewRows: hit.rows,
+              runStatus: 'done',
+              style: {
+                ...(node.data?.style || {}),
+                fillColor: '#16a34a',
+                borderColor: '#166534',
+              },
+            },
+          };
+        }));
+      }
+      setShowExecutionModal(true);
+      toast.success('Flow executed and saved in Prisma');
     } catch (error) {
       console.error('Flow execution failed:', error);
       toast.error('Flow execution failed');
+    } finally {
       setIsExecuting(false);
       setActiveRequests(0);
     }
@@ -1005,40 +1116,9 @@ function FlowBuilderContent() {
     setCinematicMode(enabled);
   };
   
-  const handleExecutionComplete = async (result: any) => {
+  const handleExecutionComplete = async () => {
     setIsExecuting(false);
     setActiveRequests(0);
-    
-    // Show results after animation completes
-    try {
-      const executionResult = currentFlowId 
-        ? await flowsAPI.runFlow(currentFlowId, result?.inputData || {})
-        : {
-            status: 'completed',
-            logs: [
-              'Flow execution started',
-              'Processing nodes sequentially',
-              'All nodes executed successfully',
-              'Flow completed'
-            ],
-            outputContext: { ...result?.inputData, result: 'success', executedAt: new Date().toISOString() }
-          };
-      
-      const enhancedResult = {
-        ...executionResult,
-        executionId: `exec_${Date.now()}`,
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        duration: 2300
-      };
-      
-      setExecutionResult(enhancedResult);
-      setShowExecutionModal(true);
-      toast.success('Flow animation completed!');
-    } catch (error) {
-      console.error('Flow execution failed:', error);
-      toast.error('Flow execution failed');
-    }
   };
   
   const handleLoadDemo = () => {
@@ -1412,9 +1492,9 @@ function FlowBuilderContent() {
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3 overflow-x-auto">
-          <div className="flex items-center gap-4">
+      <div className="fixed top-0 left-0 right-0 z-40 h-16 bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex h-full items-center justify-between gap-4 px-6 overflow-visible">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
@@ -1425,7 +1505,20 @@ function FlowBuilderContent() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">{flowName}</span>
+                <input
+                  aria-label="Flow name"
+                  value={flowName}
+                  onChange={(event) => setFlowName(event.target.value)}
+                  onBlur={() => {
+                    const nextName = flowName.trim() || 'Untitled Flow';
+                    if (nextName !== flowName) setFlowName(nextName);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                  }}
+                  placeholder="Flow name"
+                  className="h-8 w-44 rounded-md border border-slate-300 bg-white px-2 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
               </div>
               
               {(selectedNode || selectedEdge) && (
@@ -1445,14 +1538,30 @@ function FlowBuilderContent() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <div className="relative group">
+          <div className="flex items-center gap-2 flex-nowrap shrink-0">
+            <div className="relative group" onMouseEnter={refreshSavedFlows}>
               <Button onClick={() => handleNewFlow(false)} variant="outline" size="sm" className="gap-2">
                 <Plus className="w-4 h-4" />
                 New Flow
               </Button>
-              <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
-                <div className="py-2">
+              <div className="absolute left-0 top-full z-[100] w-64 pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="max-h-96 overflow-y-auto rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
+                  {savedFlows.length > 0 && (
+                    <>
+                      <div className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved flows</div>
+                      {savedFlows.map((flow) => (
+                        <button
+                          key={flow.id}
+                          onClick={() => handleOpenSavedFlow(flow.id)}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 flex items-center gap-2"
+                        >
+                          <FileText className="w-4 h-4 shrink-0 text-slate-500" />
+                          <span className="truncate">{flow.name}</span>
+                        </button>
+                      ))}
+                      <div className="my-1 border-t border-slate-100" />
+                    </>
+                  )}
                   <button
                     onClick={() => handleNewFlow(false)}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 flex items-center gap-2"
@@ -1823,6 +1932,16 @@ function FlowBuilderContent() {
               Whiteboard
             </Button>
             
+            <Button
+              onClick={handleExecutionPlay}
+              size="sm"
+              className="gap-2 bg-green-600 text-white hover:bg-green-700"
+              title="Play this flow"
+            >
+              <Play className="w-4 h-4" />
+              Play
+            </Button>
+
             <ExecutionControls
               isExecuting={isExecuting}
               onPlay={handleExecutionPlay}
@@ -1889,12 +2008,34 @@ function FlowBuilderContent() {
               }))}
               edges={edges.map(edge => ({
                 ...edge,
-                type: edge.type === 'straight' ? 'progressive' : 'animated',
+                type: 'smooth',
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  width: 16,
+                  height: 16,
+                  color: '#475569',
+                },
+                style: {
+                  stroke: '#475569',
+                  strokeWidth: 2,
+                },
                 data: {
                   ...edge.data,
                   cinematicMode
                 }
               }))}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              connectionLineStyle={{ stroke: '#475569', strokeWidth: 2 }}
+              connectionRadius={28}
+              defaultEdgeOptions={{
+                type: 'smooth',
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  width: 16,
+                  height: 16,
+                  color: '#475569',
+                },
+              }}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}

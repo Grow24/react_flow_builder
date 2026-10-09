@@ -35,6 +35,7 @@ export function EndNode({ data, selected }: EndNodeProps) {
       label={data.label || 'End'}
       shape={nodeStyle.shape}
       selected={selected}
+      ports="in"
     />
   );
 }

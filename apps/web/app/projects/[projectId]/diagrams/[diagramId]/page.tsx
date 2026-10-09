@@ -8,7 +8,8 @@ import { NodePalette } from '@/components/NodePalette'
 import { PropertiesPanel } from '@/components/PropertiesPanel'
 import { Toolbar } from '@/components/Toolbar'
 import { type RFGraph, type ValidationIssue } from '@hbmp/shared-types'
-import { api } from '@/lib/api'
+import { API_BASE, api } from '@/lib/api'
+import { RegistryVersion, generateMermaid } from '@hbmp/engine'
 
 interface DiagramPageProps {
   params: {
@@ -83,18 +84,14 @@ export default function DiagramPage({ params }: DiagramPageProps) {
     if (!graph) return
 
     try {
-      const response = await fetch(`/api/projects/${params.projectId}/diagrams/${params.diagramId}/validate`, {
+      const data = await api<{ issues?: ValidationIssue[] }>('/api/diagrams/validate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ rfGraph: graph }),
+        body: JSON.stringify({
+          graph,
+          registryVersion: RegistryVersion,
+        }),
       })
-
-      if (!response.ok) throw new Error('Failed to validate diagram')
-      
-      const data = await response.json()
-      setValidationIssues(data.validationIssues || [])
+      setValidationIssues(data.issues || [])
     } catch (error) {
       console.error('Error validating diagram:', error)
     }
@@ -103,61 +100,58 @@ export default function DiagramPage({ params }: DiagramPageProps) {
   const handleLayout = async (algorithm: string) => {
     if (!graph) return
 
+    if (algorithm === 'reset') {
+      await loadDiagram()
+      return
+    }
+
     try {
-      const response = await fetch(`/api/projects/${params.projectId}/diagrams/${params.diagramId}/layout`, {
+      const data = await api<{ graph: RFGraph }>('/api/diagrams/layout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          rfGraph: graph,
-          algorithm 
+        body: JSON.stringify({
+          graph,
+          options: {
+            algorithm: algorithm === 'lane-aware' ? 'hierarchical' : algorithm,
+            laneAware: algorithm === 'lane-aware' || algorithm === 'hierarchical',
+            orientation: 'LR',
+          },
         }),
       })
-
-      if (!response.ok) throw new Error('Failed to apply layout')
-      
-      const data = await response.json()
-      setGraph(data.rfGraph)
+      setGraph(data.graph)
     } catch (error) {
       console.error('Error applying layout:', error)
     }
+  }
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.style.display = 'none'
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
   }
 
   const handleExport = async (format: 'svg' | 'png' | 'pdf' | 'mermaid') => {
     if (!graph) return
 
     try {
-      const response = await fetch(`/api/projects/${params.projectId}/diagrams/${params.diagramId}/export`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          rfGraph: graph,
-          format 
-        }),
-      })
-
-      if (!response.ok) throw new Error('Failed to export diagram')
-      
       if (format === 'mermaid') {
-        const data = await response.json()
-        // Handle mermaid text response
-        console.log('Mermaid diagram:', data.content)
-      } else {
-        // Handle binary file download
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.style.display = 'none'
-        a.href = url
-        a.download = `diagram.${format}`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        const content = generateMermaid(graph)
+        downloadBlob(new Blob([content], { type: 'text/plain' }), 'diagram.mmd')
+        return
       }
+
+      const created = await api<{ artifactId: string }>(`/api/exports/${params.diagramId}`, {
+        method: 'POST',
+        body: JSON.stringify({ format }),
+      })
+      const response = await fetch(`${API_BASE}/api/exports/${created.artifactId}`)
+      if (!response.ok) throw new Error('Failed to download export')
+      downloadBlob(await response.blob(), `diagram.${format}`)
     } catch (error) {
       console.error('Error exporting diagram:', error)
     }

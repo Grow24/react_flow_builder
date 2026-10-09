@@ -1,5 +1,6 @@
 import React from 'react';
-import { NodeProps, Handle, Position } from '@xyflow/react';
+import { NodeProps } from '@xyflow/react';
+import { FlowPorts } from './FlowPorts';
 import { Settings, Mail, Database, Globe, Zap, Plus } from 'lucide-react';
 
 interface Action {
@@ -30,12 +31,7 @@ export const ActivityNode: React.FC<NodeProps> = ({ data, selected }) => {
 
   return (
     <div className="relative">
-      {/* Handles */}
-      <Handle type="target" position={Position.Top} id="top" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="source" position={Position.Right} id="right" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="target" position={Position.Left} id="left" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      
+      <FlowPorts variant="in-out" />
       <div
         className={`min-w-32 px-4 py-3 shadow-lg ${selected ? 'ring-2 ring-blue-500' : ''}`}
         style={{

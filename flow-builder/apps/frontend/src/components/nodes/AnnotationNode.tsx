@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { FlowPorts } from './FlowPorts';
 import { StickyNote } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
@@ -64,10 +64,7 @@ export function AnnotationNode({ data, selected }: AnnotationNodeProps) {
         </div>
       </div>
       
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-amber-500 border-2 border-white" />
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-amber-500 border-2 border-white" />
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-amber-500 border-2 border-white" />
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-amber-500 border-2 border-white" />
+      <FlowPorts variant="in-out" />
     </div>
   );
 }

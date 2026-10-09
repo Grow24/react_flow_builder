@@ -1,5 +1,4 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
 import { StyledNodeWrapper } from './StyledNodeWrapper';
 import { drawioNodeStyles } from '../../config/nodeStyles';
 import * as LucideIcons from 'lucide-react';
@@ -44,6 +43,7 @@ export function DecisionNode({ data, selected }: DecisionNodeProps) {
         label={data.label || 'Decision'}
         shape={nodeStyle.shape}
         selected={selected}
+        ports="decision"
       >
         {conditions.length > 0 && (
           <div className="text-xs opacity-75 mt-1">
@@ -51,35 +51,6 @@ export function DecisionNode({ data, selected }: DecisionNodeProps) {
           </div>
         )}
       </StyledNodeWrapper>
-      
-      {/* Input handle */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="w-3 h-3 border-2 border-amber-600 bg-white"
-      />
-      
-      {/* Output handle */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 border-2 border-amber-600 bg-white"
-      />
-      
-      {/* Additional handles for multiple conditions */}
-      {conditions.map((condition, index) => (
-        <Handle
-          key={`condition-${condition.id || index}`}
-          type="source"
-          position={Position.Right}
-          id={condition.id || `condition-${index}`}
-          style={{ 
-            right: '-6px',
-            top: `${50 + (index - conditions.length/2 + 0.5) * 15}%`
-          }}
-          className="w-3 h-3 border-2 border-amber-600 bg-white opacity-0 hover:opacity-100 transition-opacity duration-200"
-        />
-      ))}
     </div>
   );
 }

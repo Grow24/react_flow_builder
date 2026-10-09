@@ -99,6 +99,7 @@ export function TableNode({ data, selected }: TableNodeProps) {
         label={data.label || 'Table'}
         shape="rectangle"
         selected={selected}
+        ports="none"
       >
         <div className="mt-2">
           <svg 

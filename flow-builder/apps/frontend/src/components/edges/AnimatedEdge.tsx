@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   BaseEdge, 
   EdgeLabelRenderer, 
-  getBezierPath,
+  getSmoothStepPath,
   EdgeProps
 } from '@xyflow/react';
 
@@ -36,7 +36,7 @@ export const AnimatedEdge: React.FC<AnimatedEdgeProps> = ({
   isHighlighted = false,
   cinematicMode = false
 }) => {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,

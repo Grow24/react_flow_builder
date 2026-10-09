@@ -199,6 +199,7 @@ export interface LoadResponse {
     name: string;
     version: number;
     status: string;
+    kind?: string;
   };
 }
 

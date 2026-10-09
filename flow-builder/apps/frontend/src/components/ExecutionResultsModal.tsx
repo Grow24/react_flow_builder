@@ -21,6 +21,7 @@ interface ExecutionResult {
   logs: string[];
   outputContext: Record<string, any>;
   errors?: string[];
+  prismaRunId?: number;
 }
 
 interface ExecutionResultsModalProps {
@@ -168,7 +169,7 @@ export function ExecutionResultsModal({
                   <CheckCircle className="w-4 h-4 text-slate-500" />
                   <span className="text-sm font-medium text-slate-700">Status</span>
                 </div>
-                <div className="text-lg font-semibold capitalize text-slate-900">{result.status}</div>
+                <div className="text-lg font-semibold capitalize text-slate-900">{result.status}{result.prismaRunId ? ` · Prisma #${result.prismaRunId}` : ''}</div>
               </div>
             </div>
 

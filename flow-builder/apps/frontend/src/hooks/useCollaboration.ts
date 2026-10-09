@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { API_ORIGIN } from '../api/origin';
 
 export interface CollabUser {
   id: string;
@@ -40,7 +41,7 @@ export const useCollaboration = ({
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(`http://localhost:3001/${namespace}`, {
+    const newSocket = io(`${API_ORIGIN}/${namespace}`, {
       auth: { token: 'demo-token' }
     });
 

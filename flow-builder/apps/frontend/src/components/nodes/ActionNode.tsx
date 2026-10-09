@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { FlowPorts } from './FlowPorts';
 import { Zap, Mail, Database, Globe } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
@@ -65,9 +65,7 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
   };
   
   return (
-    <div className={`relative transition-all duration-200 ${ 
-      selected ? 'scale-105' : 'hover:scale-102'
-    }`}>
+    <div className="relative">
       {/* Rectangle Shape */}
       <div 
         className={`w-44 h-20 border flex items-center justify-center transition-all duration-200 ${
@@ -90,11 +88,7 @@ export function ActionNode({ data, selected }: ActionNodeProps) {
       {/* Action Type Badge */}
       {getActionBadge()}
       
-      {/* Custom Handles */}
-      <Handle type="target" position={Position.Top} id="top" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="source" position={Position.Right} id="right" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
-      <Handle type="target" position={Position.Left} id="left" className="w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600" />
+      <FlowPorts variant="in-out" />
     </div>
   );
 }

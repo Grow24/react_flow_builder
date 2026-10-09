@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../api/origin';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { X, Search, Microscope, Beaker, Zap, BarChart3, FlaskConical, BookOpen } from 'lucide-react';
@@ -52,7 +53,7 @@ export const ScienceTemplateGallery: React.FC<ScienceTemplateGalleryProps> = ({
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/science-templates');
+      const response = await fetch(`${API_BASE}/science-templates`);
       const data = await response.json();
       setTemplates(data);
     } catch (error) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { FlowPorts } from './FlowPorts';
 
 interface GroupNodeProps {
   data: {
@@ -40,11 +40,7 @@ export function GroupNode({ data, selected }: GroupNodeProps) {
       {/* Group Frame */}
       <div className="w-full h-full rounded-lg border-2 border-dashed border-blue-300 opacity-50" />
       
-      {/* Handles for connections */}
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-blue-500 border-2 border-white" />
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-blue-500 border-2 border-white" />
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-blue-500 border-2 border-white" />
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-blue-500 border-2 border-white" />
+      <FlowPorts variant="in-out" />
     </div>
   );
 }

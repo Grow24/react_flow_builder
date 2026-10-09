@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Table Node Styles */
-@import './styles/tableNode.css';
-
 /* Hide scrollbars for a cleaner, professional look */
 .scrollbar-hide {
   -ms-overflow-style: none;

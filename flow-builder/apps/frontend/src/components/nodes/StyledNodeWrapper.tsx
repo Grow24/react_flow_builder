@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { FlowPorts, type FlowPortVariant } from './FlowPorts';
 
 interface StyledNodeWrapperProps {
   children?: React.ReactNode;
@@ -12,6 +12,7 @@ interface StyledNodeWrapperProps {
   selected?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  ports?: FlowPortVariant;
 }
 
 export const StyledNodeWrapper: React.FC<StyledNodeWrapperProps> = ({
@@ -24,7 +25,8 @@ export const StyledNodeWrapper: React.FC<StyledNodeWrapperProps> = ({
   shape = 'rectangle',
   selected = false,
   className = '',
-  style = {}
+  style = {},
+  ports = 'in-out',
 }) => {
   const getShapeStyle = () => {
     const baseStyle = {
@@ -54,10 +56,12 @@ export const StyledNodeWrapper: React.FC<StyledNodeWrapperProps> = ({
       case 'diamond':
         return {
           ...baseStyle,
-          transform: 'rotate(45deg)',
-          width: '60px',
-          height: '60px',
-          borderRadius: '8px'
+          width: '96px',
+          height: '96px',
+          border: 'none',
+          background: 'transparent',
+          boxShadow: 'none',
+          borderRadius: 0,
         };
       case 'circle':
         return {
@@ -90,58 +94,51 @@ export const StyledNodeWrapper: React.FC<StyledNodeWrapperProps> = ({
     }
   };
 
-  const getLabelStyle = () => {
-    if (shape === 'diamond') {
-      return {
-        transform: 'rotate(-45deg)',
-        fontSize: '10px',
-        textAlign: 'center' as const,
-        maxWidth: '40px',
-        lineHeight: '1.2'
-      };
-    }
-    return {
-      textAlign: 'center' as const,
-      fontSize: '12px',
-      fontWeight: 600,
-      lineHeight: '1.2',
-      padding: '0 4px'
-    };
+  const labelStyle = {
+    textAlign: 'center' as const,
+    fontSize: shape === 'diamond' ? '11px' : '12px',
+    fontWeight: 600,
+    lineHeight: '1.2',
+    padding: shape === 'diamond' ? '0 18px' : '0 4px',
   };
 
   return (
-    <div className="relative group">
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="w-2 h-2 border border-gray-400 bg-white group-hover:opacity-100 opacity-0 transition-opacity"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-2 h-2 border border-gray-400 bg-white group-hover:opacity-100 opacity-0 transition-opacity"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-2 h-2 border border-gray-400 bg-white group-hover:opacity-100 opacity-0 transition-opacity"
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="w-2 h-2 border border-gray-400 bg-white group-hover:opacity-100 opacity-0 transition-opacity"
-      />
-
-      <div
-        style={getShapeStyle()}
-        className={`${selected ? 'ring-2 ring-blue-400' : ''} ${className}`}
-      >
-        <div style={getLabelStyle()}>
-          {icon && <span style={{ marginRight: '4px', fontSize: '10px' }}>{icon}</span>}
-          {label}
+    <div className="relative">
+      <FlowPorts variant={ports} />
+      {shape === 'diamond' ? (
+        <div className={`relative ${selected ? 'ring-2 ring-blue-400 ring-offset-2' : ''} ${className}`} style={{ width: 96, height: 96 }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: border,
+              clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 3,
+              background: color,
+              clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)',
+            }}
+          />
+          <div className="absolute inset-0 flex items-center justify-center" style={{ ...labelStyle, color: textColor }}>
+            <span>{label}</span>
+          </div>
         </div>
-        {children}
-      </div>
+      ) : (
+        <div
+          style={getShapeStyle()}
+          className={`${selected ? 'ring-2 ring-blue-400' : ''} ${className}`}
+        >
+          <div style={labelStyle}>
+            {icon && <span style={{ marginRight: '4px', fontSize: '10px' }}>{icon}</span>}
+            {label}
+          </div>
+          {children}
+        </div>
+      )}
     </div>
   );
 };

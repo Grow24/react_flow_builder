@@ -15,6 +15,7 @@ import { ImageNode } from '../components/nodes/ImageNode';
 import { ActivityNode } from '../components/nodes/ActivityNode';
 import { StickyNoteNode } from '../components/nodes/StickyNoteNode';
 import { TableNode as TableNodeComponent } from '../components/nodes/TableNodeEnhanced';
+import { DisplayNode, FilterNode, ImportTableNode, JoinNode } from '../components/nodes/DataFlowNodes';
 import React from 'react';
 
 // Wrapper to pass id prop
@@ -38,4 +39,8 @@ export const nodeTypes = {
   image: ImageNode,
   stickynote: StickyNoteNode,
   table: TableNode,
+  importtable: ImportTableNode,
+  filter: FilterNode,
+  join: JoinNode,
+  display: DisplayNode,
 };

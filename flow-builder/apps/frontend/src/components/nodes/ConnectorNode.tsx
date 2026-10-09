@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { FlowPorts } from './FlowPorts';
 import { ArrowRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
@@ -34,9 +34,7 @@ export function ConnectorNode({ data, selected }: ConnectorNodeProps) {
   };
 
   return (
-    <div className={`relative transition-all duration-200 ${ 
-      selected ? 'scale-110' : 'hover:scale-105'
-    }`}>
+    <div className="relative">
       {/* Circular connector */}
       <div 
         className={`w-12 h-12 rounded-full border flex items-center justify-center ${
@@ -54,19 +52,7 @@ export function ConnectorNode({ data, selected }: ConnectorNodeProps) {
         </div>
       )}
       
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="w-3 h-3 bg-slate-500 border-2 border-white shadow-md"
-        style={{ left: '-6px' }}
-      />
-      
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-slate-500 border-2 border-white shadow-md"
-        style={{ right: '-6px' }}
-      />
+      <FlowPorts variant="in-out" />
     </div>
   );
 }

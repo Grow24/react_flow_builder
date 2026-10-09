@@ -20,8 +20,23 @@ model FlowMaster {
   edges         EdgeMaster[]
   variables     VariableMaster[]
   versions      FlowVersionHistory[]
+  runs          FlowRun[]
   
   @@map("flows")
+}
+
+model FlowRun {
+  id         Int      @id @default(autoincrement())
+  flowId     Int
+  status     String
+  inputJson  String
+  outputJson String
+  logs       String
+  createdAt  DateTime @default(now())
+
+  flow FlowMaster @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@map("flow_runs")
 }
 
 model NodeMaster {

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -29,7 +29,7 @@ model Diagram {
   status        String   // "draft" | "published"
   rfJson        Json     // React Flow snapshot for quick reloads
   mxXml         Bytes    // Authoritative mxGraph XML (UTF-8 bytes)
-  mermaid       String?  @db.Text // optional cached DSL
+  mermaid       String?  // optional cached DSL
   createdBy     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -51,7 +51,7 @@ model ExportArtifact {
   diagramId     String
   kind          String   // "svg" | "png" | "pdf" | "thumb"
   contentType   String
-  bytes         Bytes    @db.LongBlob
+  bytes         Bytes
   createdAt     DateTime @default(now())
   
   // Relations

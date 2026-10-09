@@ -35,8 +35,9 @@ const layoutRequestSchema = z.object({
     meta: z.object({}).optional()
   }),
   options: z.object({
+    algorithm: z.enum(['hierarchical', 'tree', 'stack', 'organic', 'circle']).optional(),
     laneAware: z.boolean().optional(),
-    orientation: z.enum(['LR', 'TB', 'RL', 'BT']).optional()
+    orientation: z.enum(['LR', 'TB']).optional()
   }).optional()
 });
 
@@ -144,7 +145,7 @@ router.post('/layout', asyncHandler(async (req: any, res: any) => {
 
   // Apply layout
   const layoutResult = layoutGraph(graph, {
-    algorithm: 'hierarchical',
+    algorithm: options.algorithm ?? 'hierarchical',
     laneAware: options.laneAware ?? true,
     orientation: options.orientation ?? 'LR'
   });
@@ -286,12 +287,13 @@ router.get('/:id', asyncHandler(async (req: any, res: any) => {
 
   const response: LoadResponse = {
     rf: diagram.rfJson as any,
-    xml: diagram.mxXml.toString('utf-8'),
+    xml: Buffer.from(diagram.mxXml).toString('utf-8'),
     mermaid: diagram.mermaid || undefined,
     meta: {
       name: diagram.name,
       version: diagram.version,
-      status: diagram.status
+      status: diagram.status,
+      kind: diagram.kind
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_ORIGIN } from '../../api/origin';
 import { ExternalLink, FileText, Image, Video, Volume2, Paperclip } from 'lucide-react';
 
 interface MediaAsset {
@@ -52,7 +53,7 @@ export const EmbedCard: React.FC<EmbedCardProps> = ({ media, onRemove, compact =
         return (
           <div className="relative">
             <img
-              src={media.url.startsWith('http') ? media.url : `http://localhost:3001${media.url}`}
+              src={media.url.startsWith('http') ? media.url : `${API_ORIGIN}${media.url}`}
               alt={media.name}
               className="w-full h-48 object-cover rounded cursor-pointer"
               onClick={() => setShowLightbox(true)}
@@ -62,7 +63,7 @@ export const EmbedCard: React.FC<EmbedCardProps> = ({ media, onRemove, compact =
                 className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
                 onClick={() => setShowLightbox(false)}
               >
-                <img src={media.url.startsWith('http') ? media.url : `http://localhost:3001${media.url}`} alt={media.name} className="max-w-full max-h-full" />
+                <img src={media.url.startsWith('http') ? media.url : `${API_ORIGIN}${media.url}`} alt={media.name} className="max-w-full max-h-full" />
               </div>
             )}
           </div>
@@ -71,7 +72,7 @@ export const EmbedCard: React.FC<EmbedCardProps> = ({ media, onRemove, compact =
       case 'video':
         return (
           <video controls className="w-full h-48 rounded">
-            <source src={media.url.startsWith('http') ? media.url : `http://localhost:3001${media.url}`} type={media.mimeType} />
+            <source src={media.url.startsWith('http') ? media.url : `${API_ORIGIN}${media.url}`} type={media.mimeType} />
           </video>
         );
 
@@ -79,7 +80,7 @@ export const EmbedCard: React.FC<EmbedCardProps> = ({ media, onRemove, compact =
         return (
           <div className="p-4 bg-gray-50 rounded">
             <audio controls className="w-full">
-              <source src={media.url.startsWith('http') ? media.url : `http://localhost:3001${media.url}`} type={media.mimeType} />
+              <source src={media.url.startsWith('http') ? media.url : `${API_ORIGIN}${media.url}`} type={media.mimeType} />
             </audio>
           </div>
         );
@@ -90,7 +91,7 @@ export const EmbedCard: React.FC<EmbedCardProps> = ({ media, onRemove, compact =
             <FileText className="w-8 h-8 text-red-500" />
             <div>
               <div className="font-medium">{media.name}</div>
-              <a href={media.url.startsWith('http') ? media.url : `http://localhost:3001${media.url}`} target="_blank" rel="noopener noreferrer" 
+              <a href={media.url.startsWith('http') ? media.url : `${API_ORIGIN}${media.url}`} target="_blank" rel="noopener noreferrer" 
                  className="text-blue-500 hover:underline text-sm">
                 Open PDF
               </a>

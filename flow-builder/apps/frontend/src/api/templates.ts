@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3001/api';
+import { API_BASE as API_BASE_URL } from './origin';
 
 export const templatesAPI = {
   getTemplates: async () => {

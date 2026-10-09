@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -21,6 +23,19 @@ import mediaRouter from './routes/media';
 import attachmentsRouter from './routes/attachments';
 import devAuditRouter from './routes/devAudit';
 
+if (!process.env.DATABASE_URL) {
+  try {
+    const envFile = readFileSync(resolve(process.cwd(), '.env'), 'utf8');
+    for (const line of envFile.split('\n')) {
+      const match = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
+      if (!match || process.env[match[1]]) continue;
+      process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+    }
+  } catch {
+    // Prisma still reports a clear error if DATABASE_URL is missing.
+  }
+}
+
 const app = express();
 const server = createServer(app);
 const prisma = new PrismaClient();
@@ -29,13 +44,27 @@ const prisma = new PrismaClient();
 
 // Middleware
 app.use(express.json());
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:5173'] }));
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://localhost:5173',
+  ...(process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+];
+const allowAnyOrigin = allowedOrigins.includes('*');
+const corsOrigin = (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+  if (!origin || allowAnyOrigin || allowedOrigins.includes(origin)) {
+    callback(null, true);
+    return;
+  }
+  callback(null, false);
+};
+app.use(cors({ origin: corsOrigin }));
 app.use('/uploads', express.static('uploads'));
 
 // Zod schemas
 const nodeSchema = z.object({
   id: z.string(),
-  type: z.enum(['start', 'decision', 'action', 'process', 'connector', 'end', 'document', 'database', 'inputoutput', 'annotation', 'group', 'text', 'callout', 'image', 'activity', 'stickynote', 'table']),
+  type: z.enum(['start', 'decision', 'action', 'process', 'connector', 'end', 'document', 'database', 'inputoutput', 'annotation', 'group', 'text', 'callout', 'image', 'activity', 'stickynote', 'table', 'importtable', 'filter', 'join', 'display']),
   data: z.record(z.any()),
   position: z.object({ x: z.number(), y: z.number() }),
 });
@@ -93,7 +122,7 @@ app.use('/api/dev', devAuditRouter);
 // Socket.io real-time collaboration
 const io = new SocketIOServer(server, {
   cors: { 
-    origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:5173'],
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -682,7 +711,16 @@ app.post('/api/flows/:id/run', async (req, res, next) => {
     };
     
     const result = await FlowExecutionStream.runFlowWithEvents(flowData, inputContext, id);
-    res.json(result);
+    const savedRun = await prisma.flowRun.create({
+      data: {
+        flowId: Number(id),
+        status: result.status || (result.success ? 'completed' : 'failed'),
+        inputJson: JSON.stringify(inputContext),
+        outputJson: JSON.stringify(result.outputContext || result.context || {}),
+        logs: JSON.stringify(result.logs || []),
+      },
+    });
+    res.json({ ...result, prismaRunId: savedRun.id });
   } catch (error) {
     next(error);
   }
@@ -694,8 +732,12 @@ app.use(errorHandler);
 
 
 
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Socket.io collaboration ready at ws://localhost:${PORT}`);
 });

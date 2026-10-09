@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../api/origin';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { X, FileText, Users, AlertTriangle, BookOpen, Copy, Lightbulb } from 'lucide-react';
@@ -43,7 +44,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/templates');
+      const response = await fetch(`${API_BASE}/templates`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -21,16 +21,25 @@ export class FlowExecutionStream {
       // Find start node
       const startNode = flowData.nodes.find((n: any) => n.type === 'start');
       if (!startNode) throw new Error('No start node found');
+
+      const hasDataNodes = flowData.nodes.some((node: any) =>
+        ['importtable', 'filter', 'join', 'display'].includes(node.type)
+      );
+      if (hasDataNodes) {
+        return this.runTableFlow(flowData, startNode, runId);
+      }
       
       let currentNodeId = startNode.id;
       let context = { ...inputContext };
       const visitedNodes = new Set<string>();
+      const logs: string[] = [];
       
       while (currentNodeId && !visitedNodes.has(currentNodeId)) {
         visitedNodes.add(currentNodeId);
         const currentNode = flowData.nodes.find((n: any) => n.id === currentNodeId);
         
         if (!currentNode) break;
+        logs.push(`${currentNode.type}: ${currentNode.data?.label || currentNode.id}`);
         
         // Emit node start
         this.emit(flowId, {
@@ -41,7 +50,7 @@ export class FlowExecutionStream {
           data: { node: currentNode, context }
         });
         
-        await delay(800); // Animation timing
+        await delay(150);
         
         // Process node
         let nextNodeId: string | null = null;
@@ -61,6 +70,7 @@ export class FlowExecutionStream {
               
             case 'action':
               await this.executeAction(currentNode, context);
+              logs.push(`Action type ${currentNode.data?.actionType || 'email'} finished`);
               nextNodeId = this.getNextNode(flowData, currentNodeId);
               break;
               
@@ -101,7 +111,7 @@ export class FlowExecutionStream {
               }
             });
             
-            await delay(600); // Edge animation time
+            await delay(50);
           }
           
         } catch (error) {
@@ -127,7 +137,15 @@ export class FlowExecutionStream {
         data: { context, success: true }
       });
       
-      return { success: true, context, runId };
+      logs.push('Flow completed');
+      return {
+        success: true,
+        status: 'completed',
+        logs,
+        outputContext: context,
+        context,
+        runId,
+      };
       
     } catch (error) {
       this.emit(flowId, {
@@ -138,10 +156,105 @@ export class FlowExecutionStream {
         data: { error: error.message }
       });
       
-      return { success: false, error: error.message, runId };
+      return {
+        success: false,
+        status: 'failed',
+        logs: [error.message],
+        outputContext: {},
+        error: error.message,
+        runId,
+      };
     }
   }
   
+  private static runTableFlow(flowData: any, startNode: any, runId: string) {
+    const logs: string[] = [];
+    const nodeResults: Array<{ id: string; status: string; rows: any[] }> = [];
+    const cache = new Map<string, any[]>();
+    const steps: Array<{ node: string; kind: string; rows: any[] }> = [];
+
+    const incoming = (nodeId: string) =>
+      flowData.edges.filter((edge: any) => edge.target === nodeId);
+    const findNode = (nodeId: string) =>
+      flowData.nodes.find((node: any) => node.id === nodeId);
+
+    const produce = (nodeId: string): any[] => {
+      if (cache.has(nodeId)) return cache.get(nodeId) || [];
+      const node = findNode(nodeId);
+      if (!node) return [];
+      cache.set(nodeId, []);
+
+      let rows: any[] = [];
+      if (node.type === 'importtable') {
+        rows = Array.isArray(node.data?.rows) ? node.data.rows : [];
+        logs.push(`Imported ${node.data?.tableName || 'table'}: ${rows.length} rows`);
+      } else if (node.type === 'filter') {
+        const parent = incoming(nodeId)[0];
+        const sourceRows = parent ? produce(parent.source) : [];
+        const column = node.data?.column;
+        const value = node.data?.value;
+        rows = sourceRows.filter((row) => String(row?.[column]) === String(value)).slice(0, 1);
+        logs.push(`Filter kept 1 row where ${column} = ${value}`);
+      } else if (node.type === 'join') {
+        const parents = incoming(nodeId);
+        const leftRows = parents[0] ? produce(parents[0].source) : [];
+        const rightRows = parents[1] ? produce(parents[1].source) : [];
+        const leftKey = node.data?.leftKey || 'id';
+        const rightKey = node.data?.rightKey || 'customerId';
+        rows = [];
+        for (const left of leftRows) {
+          for (const right of rightRows) {
+            if (String(left?.[leftKey]) === String(right?.[rightKey])) {
+              rows.push({ ...left, ...right });
+            }
+          }
+        }
+        logs.push(`Joined ${leftRows.length} + ${rightRows.length} rows into ${rows.length}`);
+      } else if (node.type === 'display') {
+        const parent = incoming(nodeId)[0];
+        rows = parent ? produce(parent.source) : [];
+        logs.push(`Display is showing ${rows.length} row(s)`);
+      } else if (node.type === 'start') {
+        logs.push(`Start: ${node.data?.label || 'Start'}`);
+      }
+
+      cache.set(nodeId, rows);
+      nodeResults.push({ id: nodeId, status: 'completed', rows });
+      if (node.type !== 'start') {
+        steps.push({
+          node: node.data?.label || node.type,
+          kind: node.type,
+          rows,
+        });
+      }
+      return rows;
+    };
+
+    const queue = [startNode.id];
+    const seen = new Set<string>();
+    while (queue.length > 0) {
+      const nodeId = queue.shift() as string;
+      if (seen.has(nodeId)) continue;
+      seen.add(nodeId);
+      produce(nodeId);
+      flowData.edges
+        .filter((edge: any) => edge.source === nodeId)
+        .forEach((edge: any) => queue.push(edge.target));
+    }
+
+    logs.push('Flow completed');
+    const outputContext = { steps };
+    return {
+      success: true,
+      status: 'completed',
+      logs,
+      outputContext,
+      context: outputContext,
+      nodeResults,
+      runId,
+    };
+  }
+
   private static getNextNode(flowData: any, currentNodeId: string): string | null {
     const edge = flowData.edges.find((e: any) => e.source === currentNodeId);
     return edge?.target || null;

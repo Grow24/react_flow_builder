@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { API_ORIGIN } from '../api/origin';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -62,7 +63,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         ? { flowData: JSON.parse(content) }
         : { xmlContent: content };
 
-      const response = await fetch(`http://localhost:3001${endpoint}`, {
+      const response = await fetch(`${API_ORIGIN}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

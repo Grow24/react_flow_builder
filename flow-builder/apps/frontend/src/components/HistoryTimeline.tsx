@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../api/origin';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { X, Clock, User, RotateCcw, Eye } from 'lucide-react';
@@ -45,7 +46,7 @@ export const HistoryTimeline: React.FC<HistoryTimelineProps> = ({
     
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/flows/${flowId}/versions`);
+      const response = await fetch(`${API_BASE}/flows/${flowId}/versions`);
       const data = await response.json();
       setVersions(data);
     } catch (error) {
